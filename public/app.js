@@ -17,7 +17,7 @@
   function renderCart() {
     const content = document.querySelector('#cart-content');
     if (!cartQuantity) {
-      content.innerHTML = '<p class="empty-cart">შენი კალათა ჯერ ცარიელია.</p><button class="button primary checkout-button" id="continue-shopping">პროდუქტის ნახვა ↗</button>';
+      content.innerHTML = '<p class="empty-cart">შენი კალათა ჯერ ცარიელია.</p><button class="button primary checkout-button" id="continue-shopping">პროდუქტის ნახვა </button>';
       document.querySelector('#continue-shopping').onclick = () => cartDialog.close();
       return;
     }
@@ -27,7 +27,7 @@
     document.querySelector('#remove-item').onclick = () => { cartQuantity = 0; saveCart(); renderCart(); };
     const checkout = document.querySelector('#checkout');
     document.querySelector('#checkout-note').textContent = 'გადაიხადე მიღებისას. რეგისტრაცია არ გჭირდება — მხოლოდ საკონტაქტო და მიწოდების მონაცემები.';
-    checkout.textContent = 'შეკვეთის გაფორმება ↗';
+    checkout.textContent = 'შეკვეთის გაფორმება ';
     checkout.onclick = showCheckout;
   }
   function showCheckout() {
@@ -53,9 +53,9 @@
         <div class="checkout-summary"><div><span>YYLFD · 100 მლ × ${orderedQuantity}</span><strong>${money(PRICE * orderedQuantity)}</strong></div><div><span>მიწოდება</span><span>დაზუსტდება ტელეფონით</span></div></div>
         <p class="order-disclosure">გაგზავნამდე ტელეფონით დაგიდასტურებთ მიწოდების საფასურს, სრულ თანხასა და ვადას. წინასწარი გადახდა არ გჭირდება.</p>
         <p class="form-error" id="order-error" role="alert" hidden></p>
-        <button class="button primary checkout-button" type="submit" id="submit-order">შეკვეთის გაგზავნა <span>↗</span></button>
+        <button class="button primary checkout-button" type="submit" id="submit-order">შეკვეთის გაგზავნა </button>
         <p class="data-note">მონაცემებს ვიყენებთ შეკვეთის დასადასტურებლად და მიწოდებისთვის.</p>
-        <button type="button" class="back-to-cart" id="back-to-cart">← კალათაში დაბრუნება</button>
+        <button type="button" class="back-to-cart" id="back-to-cart"> კალათაში დაბრუნება</button>
       </form>`;
     const form = document.querySelector('#order-form');
     form.addEventListener('submit', async event => {
@@ -70,12 +70,12 @@
         if (!response.ok || !/^CC-[A-F0-9]{12}$/.test(result.id || '')) throw new Error(result.error || 'შეკვეთის შენახვა ვერ დადასტურდა. გთხოვ, სცადე ხელახლა.');
         cartQuantity = 0; saveCart();
         document.querySelector('#checkout-title').textContent = 'მოთხოვნა მიღებულია';
-        document.querySelector('#checkout-content').innerHTML = `<div class="order-success"><span class="success-check">✓</span><h3>მადლობა შეკვეთისთვის!</h3><p>შენი მოთხოვნა შენახულია.</p><div class="order-reference">შეკვეთის ნომერი<strong>${result.id}</strong></div><p>დაგიკავშირდებით მითითებულ ნომერზე, რომ დავადასტუროთ შეკვეთა, მიწოდების საფასური და ვადა.</p><div class="payment-option"><span class="payment-check">✓</span><div><strong>გადახდა მიღებისას</strong><p>პროდუქტის ჯამი: ${money(result.subtotalTetri / 100)}<br>მიწოდების საფასური დაზუსტდება.</p></div></div><button class="button primary checkout-button" id="finish-order">მთავარ გვერდზე დაბრუნება ↗</button></div>`;
+        document.querySelector('#checkout-content').innerHTML = `<div class="order-success"><span class="success-check">✓</span><h3>მადლობა შეკვეთისთვის!</h3><p>შენი მოთხოვნა შენახულია.</p><div class="order-reference">შეკვეთის ნომერი<strong>${result.id}</strong></div><p>დაგიკავშირდებით მითითებულ ნომერზე, რომ დავადასტუროთ შეკვეთა, მიწოდების საფასური და ვადა.</p><div class="payment-option"><span class="payment-check">✓</span><div><strong>გადახდა მიღებისას</strong><p>პროდუქტის ჯამი: ${money(result.subtotalTetri / 100)}<br>მიწოდების საფასური დაზუსტდება.</p></div></div><button class="button primary checkout-button" id="finish-order">მთავარ გვერდზე დაბრუნება </button></div>`;
         document.querySelector('#finish-order').onclick = () => checkoutDialog.close();
       } catch (failure) {
         error.textContent = failure instanceof TypeError ? 'კავშირი ვერ დამყარდა. სცადე ხელახლა — განმეორებითი გაგზავნა დუბლირებულ შეკვეთას არ შექმნის.' : failure.message;
         error.hidden = false;
-        submit.disabled = false; submit.textContent = 'შეკვეთის გაგზავნა ↗';
+        submit.disabled = false; submit.textContent = 'შეკვეთის გაგზავნა ';
       }
     });
     document.querySelector('#back-to-cart').onclick = () => { checkoutDialog.close(); renderCart(); cartDialog.showModal(); };
@@ -93,7 +93,7 @@
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
   document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', e => { if(e.target === dialog) {const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();} }));
   const info = {
-    source: ['პროდუქტის წყარო', '<div class="supplier-photo"><img src="assets/temu-product.png" alt="მომწოდებლის ორიგინალი ფოტო — YYLFD სპრეი ჭაღთან"></div><p>მომწოდებლის ორიგინალი ფოტო. პროდუქტი: YYLFD Lighting Renovation, 100 მლ.</p><p>მთავარი პროდუქტის ვიზუალი დამუშავებულია AI-ის დახმარებით. შეფუთვის ზუსტი დეტალებისთვის იხილე მომწოდებლის მასალა.</p><p><a href="https://share.temu.com/NKNulOgv1XB" target="_blank" rel="noopener noreferrer">პროდუქტი Temu-ზე ↗</a></p><p>Crystal Care დამოუკიდებელი მაღაზიაა და არ წარმოადგენს Temu-ს ან YYLFD-ის ოფიციალურ ვებგვერდს.</p>'],
+    source: ['პროდუქტის წყარო', '<div class="supplier-photo"><img src="assets/temu-product.png" alt="მომწოდებლის ორიგინალი ფოტო — YYLFD სპრეი ჭაღთან"></div><p>მომწოდებლის ორიგინალი ფოტო. პროდუქტი: YYLFD Lighting Renovation, 100 მლ.</p><p>მთავარი პროდუქტის ვიზუალი დამუშავებულია AI-ის დახმარებით. შეფუთვის ზუსტი დეტალებისთვის იხილე მომწოდებლის მასალა.</p><p><a href="https://share.temu.com/NKNulOgv1XB" target="_blank" rel="noopener noreferrer">პროდუქტი Temu-ზე </a></p><p>Crystal Care დამოუკიდებელი მაღაზიაა და არ წარმოადგენს Temu-ს ან YYLFD-ის ოფიციალურ ვებგვერდს.</p>'],
     privacy: ['კონფიდენციალურობა', '<p>შეკვეთისას ვინახავთ სახელს, ტელეფონს, ქალაქს, მისამართს, საფოსტო ინდექსს, დამატებით დეტალებსა და პროდუქტის რაოდენობას. მონაცემები გამოიყენება შეკვეთის დასადასტურებლად და მიწოდების მოსაწყობად.</p><p>შეკვეთები ინახება მაღაზიის დაცულ ბაზაში. მათი ნახვა შეუძლია მხოლოდ მაღაზიის მფლობელს. კალათის რაოდენობა ინახება შენს ბრაუზერში; საკონტაქტო და მისამართის ველებს ადგილობრივ მეხსიერებაში არ ვინახავთ.</p><p>შრიფტის ჩასატვირთად გვერდი უკავშირდება Google Fonts-ს. სარეკლამო ანალიტიკა დამატებული არ არის.</p>'],
     terms: ['შეკვეთის პირობები', '<p>ერთი ბოთლი: 24.95 ₾. ნაჩვენები საწყისი ფასი: 49.50 ₾. მოცულობა: 100 მლ. მიწოდების საფასური არ შედის პროდუქტის ფასში.</p><p>რეგისტრაცია არ გჭირდება. შეავსე სახელი, ტელეფონი და მისამართი; მოთხოვნა შეინახება მაღაზიაში. გაგზავნამდე ტელეფონით დაგიდასტურებთ ხელმისაწვდომობას, მიწოდების საფასურს, სრულ თანხასა და ვადას. გადახდა ხდება პროდუქტის მიღებისას.</p><p>შედეგი და თავსებადობა დამოკიდებულია ზედაპირზე და გამოყენებაზე. გამოიყენე ეტიკეტისა და სანათის მწარმოებლის მითითებების შესაბამისად.</p>']
   };

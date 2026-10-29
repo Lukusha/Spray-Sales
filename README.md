@@ -1,6 +1,6 @@
 # Crystal Care Georgia
 
-Georgian YYLFD 100ml spray storefront. White background, black buttons, restrained olive accents. Unit price 24.95 GEL; merchant-requested reference price 49.50 GEL.
+Georgian YYLFD 100ml spray storefront. White background, black buttons, navy information sections and black footer. Unit price 24.95 GEL; merchant-requested reference price 49.50 GEL.
 
 ## Orders
 
