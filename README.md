@@ -1,13 +1,21 @@
 # Crystal Care Georgia
 
-Georgian, mobile-first YYLFD 100ml chandelier spray storefront. Static HTML/CSS/JS in `dist/`. Unit price 24.95 GEL; displayed reference price 49.50 GEL. No invented reviews or delivery promises.
+Georgian YYLFD 100ml spray storefront. White background, black buttons, restrained olive accents. Unit price 24.95 GEL; merchant-requested reference price 49.50 GEL.
 
-## Before accepting orders
+## Orders
 
-Set verified details in `dist/config.js`: WhatsApp number (international digits), delivery description, merchant name and contact email. The cart currently saves locally and explicitly says that no order is sent. Checkout stays disabled until the required merchant details are populated. WhatsApp opens a customer-composed request; the customer sends it themselves. There is no payment processing or fulfillment integration.
+Guest flow: cart, delivery details, submit, saved order reference. Payment is cash on delivery. Product subtotal is calculated server-side in tetri. Shipping fee and delivery date are explicitly confirmed by phone before dispatch. Customers do not create an account.
 
-Also confirm supplier performance and material compatibility, product labeling, stock, shipping cost and timing, payment methods, returns policy and business contact details. Replace provisional customer-facing terms with verified merchant policies. The 49.50 GEL reference price was requested by the merchant; verify the basis before public advertising.
+Orders persist in Cloudflare D1 binding DB, table orders. The server validates fields, checks request origin and size, limits repeated submissions per phone, and uses unique request keys to avoid duplicates on retries. Personal details are not placed in browser storage.
 
-Product source: https://share.temu.com/NKNulOgv1XB . Temu blocked full listing access with a CAPTCHA. Product facts used: YYLFD Lighting Renovation branding, 100ml volume, pump bottle, supplier's no-disassembly claim. Main product photo is an AI refinement based on the supplied screenshot, not performance evidence.
+The private /merchant inbox shows the latest 200 orders after ChatGPT sign-in as the store owner. Only the email in the hosted secret ORDER_ADMIN_EMAIL is authorized. Customer checkout requires no sign-in. Check this inbox manually; no email notifications, courier dispatch or payment processor is connected.
 
-Preview: serve `dist/` with any static HTTP server.
+## Source
+
+storefront.html is served by app/route.ts. Assets are in public/. Guest writes are handled by app/api/orders/route.ts; owner reads by app/merchant/route.ts. The standard Sites Vinext starter provides build and deployment support. Database schema is in db/schema.ts; migrations are in drizzle/. Preserve the project ID in .openai/hosting.json. Configure ORDER_ADMIN_EMAIL only as a runtime secret.
+
+## Merchant follow-up
+
+Supply exact shipping pricing and timing, contact/business details and return policy before advertising. Verify supplier performance, labeling, material compatibility and the basis of the 49.50 GEL reference price.
+
+Product source: https://share.temu.com/NKNulOgv1XB . Temu verification blocked the full listing. Facts come from the user screenshot and shared supplier image: YYLFD Lighting Renovation, 100ml pump bottle and supplier's no-disassembly claim. Hero image is AI-refined; the original supplier photo remains viewable on the site.
