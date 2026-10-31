@@ -19,3 +19,7 @@ storefront.html is served by app/route.ts. Assets are in public/. Guest writes a
 Supply exact shipping pricing and timing, contact/business details and return policy before advertising. Verify supplier performance, labeling, material compatibility and the basis of the 49.50 GEL reference price.
 
 Product source: https://share.temu.com/NKNulOgv1XB . Temu verification blocked the full listing. Facts come from the user screenshot and shared supplier image: YYLFD Lighting Renovation, 100ml pump bottle and supplier's no-disassembly claim. Hero image is AI-refined; the original supplier photo remains viewable on the site.
+
+## Direct Cloudflare hosting
+
+See [CLOUDFLARE.md](CLOUDFLARE.md) for the Worker build form, D1 database setup and password-protected order inbox. Use `npm run build:cloudflare` and `npm run deploy:cloudflare` for this hosting path. Normal Sites publishing remains a separate workflow.
