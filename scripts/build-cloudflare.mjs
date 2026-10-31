@@ -15,6 +15,8 @@ const path = fileURLToPath(new URL('../dist/server/wrangler.json',import.meta.ur
 const config = JSON.parse(readFileSync(path,'utf8'));
 config.name = workerName;
 config.workers_dev = true;
+config.keep_vars = true; // Preserve provider settings entered in the dashboard on future deploys.
+config.triggers = {crons:['*/5 * * * *']};
 config.vars = {...config.vars, AUTH_PROVIDER:'cloudflare'};
 config.d1_databases = [{binding:'DB',database_name:process.env.D1_DATABASE_NAME || 'spray-sales-orders',database_id:databaseId,migrations_dir:'../../drizzle'}];
 writeFileSync(path,JSON.stringify(config,null,2)+'\n');

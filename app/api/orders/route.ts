@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { validateOrder, payloadDigest, ValidationError, UNIT_PRICE } from '../../../lib/orders';
+import { notificationInserts } from '../../../lib/order-notifications';
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: {'Cache-Control': 'no-store'} });
 export async function POST(request: Request) {
@@ -27,7 +28,12 @@ export async function POST(request: Request) {
     const recent=await db.prepare('SELECT COUNT(*) AS count FROM orders WHERE phone = ? AND created_at > ?').bind(data.phone,Date.now()-600000).first<{count:number}>();
     if (recent && recent.count >= 5) return json({error:'ამ ნომრიდან რამდენიმე მოთხოვნა უკვე მიღებულია. სცადე 10 წუთში.'},429);
     const id='CC-'+crypto.randomUUID().replace(/-/g,'').slice(0,12).toUpperCase();
-    await db.prepare(`INSERT INTO orders (id,request_key,payload_hash,created_at,customer_name,phone,city,address,apartment,postal_code,notes,quantity,unit_price_tetri,subtotal_tetri,payment_method,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(request_key) DO NOTHING`).bind(id,data.requestKey,hash,Date.now(),data.customerName,data.phone,data.city,data.address,data.apartment,data.postalCode,data.notes,data.quantity,UNIT_PRICE,UNIT_PRICE*data.quantity,'cash_on_delivery','pending_confirmation').run();
+    const now=Date.now();
+    // The order and all three notification jobs commit together in a D1 transaction.
+    await db.batch([
+      db.prepare(`INSERT INTO orders (id,request_key,payload_hash,created_at,customer_name,phone,city,address,apartment,postal_code,notes,quantity,unit_price_tetri,subtotal_tetri,payment_method,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(request_key) DO NOTHING`).bind(id,data.requestKey,hash,now,data.customerName,data.phone,data.city,data.address,data.apartment,data.postalCode,data.notes,data.quantity,UNIT_PRICE,UNIT_PRICE*data.quantity,'cash_on_delivery','pending_confirmation'),
+      ...notificationInserts(db,id,now),
+    ]);
     const saved=await db.prepare('SELECT id,payload_hash FROM orders WHERE request_key = ?').bind(data.requestKey).first<{id:string,payload_hash:string}>();
     if (!saved || saved.payload_hash !== hash) return json({error:'შეკვეთა ვერ დადასტურდა. გთხოვ, სცადე ხელახლა.'},409);
     return json({id:saved.id,subtotalTetri:UNIT_PRICE*data.quantity},201);

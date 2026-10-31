@@ -22,3 +22,22 @@ export const orders = sqliteTable('orders', {
   index('orders_created_at_idx').on(table.createdAt),
   index('orders_phone_created_idx').on(table.phone, table.createdAt),
 ]);
+
+export const orderNotifications = sqliteTable('order_notifications', {
+  id: text('id').primaryKey(),
+  orderId: text('order_id').notNull().references(() => orders.id),
+  channel: text('channel').notNull(),
+  recipient: text('recipient').notNull(),
+  status: text('status').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: integer('next_attempt_at').notNull().default(0),
+  lockedUntil: integer('locked_until').notNull().default(0),
+  claimToken: text('claim_token'),
+  providerId: text('provider_id'),
+  lastError: text('last_error'),
+  createdAt: integer('created_at').notNull(),
+  submittedAt: integer('submitted_at'),
+}, table => [
+  uniqueIndex('order_notifications_order_recipient_unique').on(table.orderId,table.channel,table.recipient),
+  index('order_notifications_due_idx').on(table.status,table.nextAttemptAt),
+]);

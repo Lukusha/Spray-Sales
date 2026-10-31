@@ -8,7 +8,7 @@ Guest flow: cart, delivery details, submit, saved order reference. Payment is ca
 
 Orders persist in Cloudflare D1 binding DB, table orders. The server validates fields, checks request origin and size, limits repeated submissions per phone, and uses unique request keys to avoid duplicates on retries. Personal details are not placed in browser storage.
 
-The private /merchant inbox shows the latest 200 orders after ChatGPT sign-in as the store owner. Only the email in the hosted secret ORDER_ADMIN_EMAIL is authorized. Customer checkout requires no sign-in. Check this inbox manually; no email notifications, courier dispatch or payment processor is connected.
+The private /merchant inbox shows the latest 200 orders after ChatGPT sign-in as the store owner. Only the email in the hosted secret ORDER_ADMIN_EMAIL is authorized. Customer checkout requires no sign-in. Each new order also creates two email alerts and an optional SMS alert in the D1 notification outbox. Provider setup is required before alerts can send; see NOTIFICATIONS.md. Courier dispatch and payment collection remain manual.
 
 ## Source
 

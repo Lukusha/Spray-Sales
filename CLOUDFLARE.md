@@ -29,6 +29,10 @@ Open `/merchant`. Username: `admin`. Password: the value you saved as `ADMIN_PAS
 
 Direct Cloudflare hosting explicitly ignores Sites visitor identity headers for merchant access. The `AUTH_PROVIDER=cloudflare` runtime variable is written into generated configuration by the standalone build script. Normal Sites builds keep their existing owner sign-in behavior.
 
+## Order notifications
+
+Orders are stored in D1 together with separate email/SMS alert jobs. See [NOTIFICATIONS.md](./NOTIFICATIONS.md) for the two email destinations, phone destination, required provider configuration and delivery status meanings. A five-minute scheduled handler retries eligible jobs. Sending credentials are runtime secrets; they are not build variables.
+
 ## Preview builds
 
 Leave preview builds off initially, so a preview cannot accept orders into the live database. Setting a preview deploy command alone does not create a separate database. Preview support requires a separate Worker/database configuration; configure that before enabling preview builds.

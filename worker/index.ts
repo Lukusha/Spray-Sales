@@ -1,6 +1,7 @@
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
+import { processPendingNotifications } from '../lib/order-notifications';
 
 const worker = {
   fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
@@ -23,7 +24,16 @@ const worker = {
         },
       };
     }
-    return runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const response=runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    if(request.method==='POST' && new URL(request.url).pathname==='/api/orders') {
+      ctx.waitUntil(Promise.resolve(response).then(async result => {
+        if(result.ok) await processPendingNotifications(env);
+      }).catch(() => console.error('Order notification processing failed; inspect the notification outbox.')));
+    }
+    return response;
+  },
+  scheduled(_event: ScheduledController, env: Cloudflare.Env, ctx: ExecutionContext) {
+    ctx.waitUntil(processPendingNotifications(env));
   },
 };
 
