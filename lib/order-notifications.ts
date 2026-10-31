@@ -1,9 +1,12 @@
 import { ORDER_EMAILS, ORDER_SMS_NUMBER, ORDER_INBOX_URL } from './order-notification-targets.ts';
+import { sendGmailSmtp } from './gmail-smtp.ts';
 
 export interface NotificationEnv {
   DB?: D1Database;
   ORDER_EMAIL_FROM?: string;
   RESEND_API_KEY?: string;
+  ORDER_EMAIL_PROVIDER?: string;
+  GMAIL_APP_PASSWORD?: string;
   TWILIO_ACCOUNT_SID?: string;
   TWILIO_AUTH_TOKEN?: string;
   TWILIO_MESSAGING_SERVICE_SID?: string;
@@ -24,6 +27,8 @@ export function notificationInserts(db: D1Database, orderId: string, now: number
 }
 
 function missingConfiguration(channel: Notice['channel'], env: NotificationEnv) {
+  if(channel==='email' && env.ORDER_EMAIL_PROVIDER==='gmail') return /^[a-zA-Z0-9]{16}$/.test((env.GMAIL_APP_PASSWORD || '').replace(/\s/g,''))
+    ? null : 'Gmail not connected: save a Google App Password in the GMAIL_APP_PASSWORD runtime secret.';
   if(channel==='email') return !env.RESEND_API_KEY || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(env.ORDER_EMAIL_FROM || '')
     ? 'Email service not configured: set RESEND_API_KEY and a verified ORDER_EMAIL_FROM.' : null;
   return !/^AC[0-9a-f]{32}$/i.test(env.TWILIO_ACCOUNT_SID || '') || !env.TWILIO_AUTH_TOKEN || !/^MG[0-9a-f]{32}$/i.test(env.TWILIO_MESSAGING_SERVICE_SID || '')
@@ -45,10 +50,11 @@ export function emailText(order: Order) {
 }
 
 // Provider acceptance is recorded as submitted; it is not proof of inbox/handset delivery.
-export async function sendNotification(notice: Notice, order: Order, env: NotificationEnv, send: typeof fetch = fetch): Promise<Outcome> {
+export async function sendNotification(notice: Notice, order: Order, env: NotificationEnv, send: typeof fetch = fetch, gmail: typeof sendGmailSmtp = sendGmailSmtp): Promise<Outcome> {
   if(notice.channel==='email' && !(ORDER_EMAILS as readonly string[]).includes(notice.recipient) || notice.channel==='sms' && notice.recipient!==ORDER_SMS_NUMBER)
     return {status:'failed',error:'Recipient is not authorized.'};
   const email=notice.channel==='email';
+  if(email && env.ORDER_EMAIL_PROVIDER==='gmail') return gmail(notice.recipient,`Crystal Care order ${order.id}`,emailText(order),notice.id,env.GMAIL_APP_PASSWORD || '');
   try {
     const response = email
       ? await send('https://api.resend.com/emails', {
