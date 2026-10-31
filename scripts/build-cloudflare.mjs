@@ -17,7 +17,7 @@ config.name = workerName;
 config.workers_dev = true;
 config.keep_vars = true; // Preserve provider settings entered in the dashboard on future deploys.
 config.triggers = {crons:['*/5 * * * *']};
-config.vars = {...config.vars, AUTH_PROVIDER:'cloudflare',ORDER_EMAIL_PROVIDER:'gmail',ORDER_EMAIL_FROM:'luka.beraia808@gmail.com'};
+config.vars = {...config.vars, AUTH_PROVIDER:'cloudflare',ORDER_EMAIL_PROVIDER:'emailjs',ORDER_EMAIL_FROM:'luka.beraia808@gmail.com'};
 config.d1_databases = [{binding:'DB',database_name:process.env.D1_DATABASE_NAME || 'spray-sales-orders',database_id:databaseId,migrations_dir:'../../drizzle'}];
 writeFileSync(path,JSON.stringify(config,null,2)+'\n');
 console.log('Standalone Cloudflare build ready. Merchant access requires the ADMIN_PASSWORD runtime secret.');

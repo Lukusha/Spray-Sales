@@ -1,7 +1,8 @@
 import { ORDER_EMAILS, ORDER_SMS_NUMBER, ORDER_INBOX_URL } from './order-notification-targets.ts';
 import { sendGmailSmtp } from './gmail-smtp.ts';
+import { emailJsReady, sendEmailJs, type EmailJsConfig } from './emailjs.ts';
 
-export interface NotificationEnv {
+export interface NotificationEnv extends EmailJsConfig {
   DB?: D1Database;
   ORDER_EMAIL_FROM?: string;
   RESEND_API_KEY?: string;
@@ -27,6 +28,8 @@ export function notificationInserts(db: D1Database, orderId: string, now: number
 }
 
 function missingConfiguration(channel: Notice['channel'], env: NotificationEnv) {
+  if(channel==='email' && env.ORDER_EMAIL_PROVIDER==='emailjs') return emailJsReady(env)
+    ? null : 'EmailJS needs its connected service, public key and two order template IDs.';
   if(channel==='email' && env.ORDER_EMAIL_PROVIDER==='gmail') return /^[a-zA-Z0-9]{16}$/.test((env.GMAIL_APP_PASSWORD || '').replace(/\s/g,''))
     ? null : 'Gmail not connected: save a Google App Password in the GMAIL_APP_PASSWORD runtime secret.';
   if(channel==='email') return !env.RESEND_API_KEY || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(env.ORDER_EMAIL_FROM || '')
@@ -54,6 +57,7 @@ export async function sendNotification(notice: Notice, order: Order, env: Notifi
   if(notice.channel==='email' && !(ORDER_EMAILS as readonly string[]).includes(notice.recipient) || notice.channel==='sms' && notice.recipient!==ORDER_SMS_NUMBER)
     return {status:'failed',error:'Recipient is not authorized.'};
   const email=notice.channel==='email';
+  if(email && env.ORDER_EMAIL_PROVIDER==='emailjs') return sendEmailJs(notice.recipient,order.id,emailText(order),env,send);
   if(email && env.ORDER_EMAIL_PROVIDER==='gmail') return gmail(notice.recipient,`Crystal Care order ${order.id}`,emailText(order),notice.id,env.GMAIL_APP_PASSWORD || '');
   try {
     const response = email
@@ -87,6 +91,7 @@ export async function processPendingNotifications(env: NotificationEnv) {
     WHERE status='sending' AND locked_until < ?`).bind(now).run();
   const pending=(await db.prepare(`SELECT id,order_id,channel,recipient,attempts,created_at FROM order_notifications
     WHERE status IN ('pending','retry','blocked') AND next_attempt_at <= ? ORDER BY created_at,id LIMIT 12`).bind(now).all<Notice>()).results;
+  let lastEmailJsAttempt=0;
   for(const notice of pending) {
     if(Date.now()-now>15000) break; // Leave headroom within the request background-work lifetime.
     const missing=missingConfiguration(notice.channel,env);
@@ -96,7 +101,8 @@ export async function processPendingNotifications(env: NotificationEnv) {
       continue;
     }
     // Stay well inside Resend's 24h idempotency window. Older unsent alerts remain visible for manual review.
-    if(notice.attempts>=6 || notice.attempts>0 && now-notice.created_at>20*3600000) {
+    const resend=notice.channel==='email' && !['gmail','emailjs'].includes(env.ORDER_EMAIL_PROVIDER || 'resend');
+    if(notice.attempts>=6 || resend && notice.attempts>0 && now-notice.created_at>20*3600000) {
       await db.prepare(`UPDATE order_notifications SET status='failed',last_error='Automatic retry limit reached.'
         WHERE id=? AND status IN ('pending','retry','blocked')`).bind(notice.id).run();
       continue;
@@ -106,6 +112,11 @@ export async function processPendingNotifications(env: NotificationEnv) {
       WHERE id=? AND status IN ('pending','retry','blocked') AND next_attempt_at<=?`).bind(token,now+120000,notice.id,now).run();
     if(claim.meta.changes!==1) continue;
     const order=await db.prepare('SELECT * FROM orders WHERE id=?').bind(notice.order_id).first<Order>();
+    if(notice.channel==='email' && env.ORDER_EMAIL_PROVIDER==='emailjs') {
+      const delay=1100-(Date.now()-lastEmailJsAttempt);
+      if(delay>0) await new Promise(resolve=>setTimeout(resolve,delay));
+      lastEmailJsAttempt=Date.now();
+    }
     const result=order ? await sendNotification(notice,order,env) : {status:'failed',error:'Order not found.'} as Outcome;
     await db.prepare(`UPDATE order_notifications SET status=?,provider_id=?,last_error=?,submitted_at=?,locked_until=0,claim_token=NULL,next_attempt_at=?
       WHERE id=? AND claim_token=? AND status='sending'`).bind(result.status,result.providerId || null,result.error || null,

@@ -8,20 +8,33 @@ Every new order on the direct Cloudflare store is saved in `spray-sales-orders` 
 
 The recipients are fixed on the server; checkout cannot change them. Existing orders remain intact; old orders are not automatically emailed. Email includes the order details; SMS includes only the order reference, quantity, subtotal and private dashboard link, to keep texts short and avoid putting customer addresses on a lock screen.
 
-## Activate Gmail email
+## Activate EmailJS email
 
-The selected sender is `luka.beraia808@gmail.com`. Direct Cloudflare builds set `ORDER_EMAIL_PROVIDER=gmail` and `ORDER_EMAIL_FROM=luka.beraia808@gmail.com`. The SMTP sender and login are fixed to this address in `lib/gmail-smtp.ts`.
+Direct Cloudflare builds select `ORDER_EMAIL_PROVIDER=emailjs`. The intended sender is `luka.beraia808@gmail.com`, connected through EmailJS's Gmail service. The account owner creates the EmailJS account and approves Google's requested access themselves; no Google App Password is needed for this route.
 
-1. Sign into that Google account and enable 2-Step Verification if needed.
-2. Open [Google App Passwords](https://myaccount.google.com/apppasswords), and create an app password named **Crystal Care orders**. App Passwords may be unavailable for some account/security settings. Do not disable account security to make them available.
-3. In Cloudflare → spray-sales → Settings → Runtime variables and secrets → Production, add `GMAIL_APP_PASSWORD` as a **Secret**, enter the generated 16-character app password, and deploy. The Google account owner must create and save this credential themselves. Never paste it into chat or commit it to Git. Do not use the ordinary Google account password.
-4. Verify a clearly labelled test order reaches both recipient inboxes and matches the D1 order record. A saved secret alone does not prove successful sending.
+1. Create a [free EmailJS account](https://dashboard.emailjs.com/sign-up), then add a Gmail email service connected to the sender above.
+2. Create two templates with **fixed To Email** fields: one for `luckysaba37@gmail.com`, one for `ekatibua1974@gmail.com`. Do not use a dynamic recipient variable. Set From Name to **Crystal Care**, use the connected service's default sender, and use subject `Crystal Care — ახალი შეკვეთა {{order_id}}`. The body should display `{{order_details}}` with preserved newlines and escaped content (double braces, not raw triple braces).
+3. In Account → Security, enable API requests from non-browser applications for the Worker. Follow the account's security requirements; never spoof an Origin header to bypass restrictions.
+4. Add the settings below to Cloudflare → spray-sales → Settings → Runtime variables and secrets → Production. The IDs and public key are identifiers; any private key must be a Secret, never committed to Git or sent in chat.
+5. Verify a clearly labelled test order reaches both recipient inboxes and matches the D1 record. Configuration and a successful deployment alone do not prove delivery.
 
-The Worker connects directly to `smtp.gmail.com:465` with TLS from the first byte. Credentials are sent only to Google's fixed SMTP endpoint. Messages include a stable Message-ID and a UTF-8 base64 body. Provider responses are not logged. A definitive temporary SMTP rejection can retry; a missing acknowledgment after message submission is marked **uncertain** and must be checked in Gmail Sent mail before retrying. SMTP does not offer Resend-style idempotency keys. Gmail's own sending limits and security restrictions apply.
+| Setting | Type | Value |
+| --- | --- | --- |
+| `EMAILJS_SERVICE_ID` | Variable | Connected Gmail service ID |
+| `EMAILJS_PUBLIC_KEY` | Variable | Account public key |
+| `EMAILJS_TEMPLATE_LUCKY` | Variable | Fixed luckysaba37 recipient template ID |
+| `EMAILJS_TEMPLATE_EKA` | Variable | Fixed ekatibua1974 recipient template ID |
+| `EMAILJS_PRIVATE_KEY` | Secret, if required | Account private key |
 
-Blocked jobs remain in D1 until Gmail is connected. Changing the ordinary Google account password may revoke the app password. Revoke **Crystal Care orders** in Google if the store should no longer send using this account.
+The free plan includes 200 requests per month and two templates. This implementation sends two separate requests per order, giving approximately 100 orders per month before tests and retries. EmailJS does not automatically charge overages; requests stop at the quota. Monitor usage in its dashboard. SMS is separate and is not included in EmailJS.
 
-References: [Google App Passwords](https://support.google.com/accounts/answer/185833), [Google SMTP](https://developers.google.com/workspace/gmail/imap/imap-smtp), [Cloudflare TLS sockets](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/).
+The server selects a fixed template per authorized recipient and sends only the canonical order reference and details to EmailJS's HTTPS API. Requests within a processing batch are separated by at least 1.1 seconds; provider rate-limit rejections queue for retry. EmailJS has no request idempotency API, so lost/ambiguous acknowledgments require manual review in Email History before resending. Blocked jobs stay in D1 until the service and templates are connected.
+
+References: [EmailJS REST API](https://www.emailjs.com/docs/rest-api/send/), [server-side API activation](https://github.com/emailjs-com/emailjs-nodejs), [pricing and quotas](https://www.emailjs.com/pricing/).
+
+### Alternative: direct Gmail SMTP
+
+The optional direct SMTP adapter remains available in `lib/gmail-smtp.ts`. It requires selecting `ORDER_EMAIL_PROVIDER=gmail` in the standalone build and storing a Google App Password as the `GMAIL_APP_PASSWORD` runtime secret. The account owner must create and submit that credential themselves. It is not the selected setup; no app password has been verified. Do not use the ordinary Google password or weaken Google account protections to enable it.
 
 ### Alternative: Resend with a custom domain
 
@@ -45,7 +58,7 @@ Successful order requests start background processing. The standalone Worker als
 
 - `blocked`: sender/provider configuration missing; no network send attempted.
 - `submitted`: the provider accepted the request. This does **not** prove inbox or handset delivery; check provider delivery logs.
-- `retry`: transient rejection or email request failure; exponential backoff, at most six attempts within 20 hours of creation after sending begins.
+- `retry`: safe transient rejection; exponential backoff, at most six attempts. Resend retries also stay within 20 hours of creation to remain inside its idempotency window.
 - `failed`: permanent provider rejection or retry limit reached. Review the error and provider console.
 - `uncertain`: a send may have reached the provider. Review its logs before any manual retry, especially for SMS.
 
